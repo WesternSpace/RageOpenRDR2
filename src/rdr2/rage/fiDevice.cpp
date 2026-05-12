@@ -50,33 +50,34 @@ HANDLE rage::fiDeviceLocal::Open(const char* fileName, bool readOnly, uint32_t d
 	return handle;
 }
 
-HANDLE rage::fiDeviceLocal::OpenOverlappedWrap(const char* fileName)
+HANDLE rage::fiDeviceLocal::Open(uint32_t* fileNameHash)
 {
-	logger::write("device", "[%s] %s", __FUNCTION__, fileName);
+	logger::write("device", "[%s] %02x", __FUNCTION__, *fileNameHash);
 	return INVALID_HANDLE_VALUE;
 }
 
-HANDLE rage::fiDeviceLocal::OpenOverlapped()
+HANDLE rage::fiDeviceLocal::Open(uint32_t* fileNameHash, uint32_t fileExt)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return INVALID_HANDLE_VALUE;
 }
 
-HANDLE rage::fiDeviceLocal::OpenWrap(const char* fileName, bool readOnly)
+HANDLE rage::fiDeviceLocal::Open(const char* fileName, bool readOnly)
 {
 	logger::write("device", "[%s] %s", __FUNCTION__, fileName);
 	return Open(fileName, readOnly, 0, 0);
 }
 
-HANDLE rage::fiDeviceLocal::OpenBulk(const char* fileName, uint64_t* ptr)
+HANDLE rage::fiDeviceLocal::OpenBulk(const char* fileName, uint64_t& outbias)
 {
+	logger::write("device", "[%s] %s", __FUNCTION__, fileName);
 	return Open(fileName, true, 0, 0);
 }
 
-HANDLE rage::fiDeviceLocal::OpenBulkOverlapped()
+HANDLE rage::fiDeviceLocal::OpenBulkOverlapped(const char* fileName)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
-	return INVALID_HANDLE_VALUE;
+	return Open(fileName, true, 0, 0);
 }
 
 HANDLE rage::fiDeviceLocal::CreateBulk(const char* fileName)
@@ -91,17 +92,17 @@ HANDLE rage::fiDeviceLocal::Create(const char* fileName, uint32_t dwShareMode, u
 	return 0;
 }
 
-HANDLE rage::fiDeviceLocal::CreateWrap(const char* fileName)
+HANDLE rage::fiDeviceLocal::Create(const char* fileName)
 {
 	logger::write("device", "[%s] %s", __FUNCTION__, fileName);
 	return 0;
 }
 
-uint32_t rage::fiDeviceLocal::Read(HANDLE handle, void* buffer, uint32_t toRead)
+int rage::fiDeviceLocal::Read(HANDLE handle, void* buffer, int bufferSize)
 {
-	logger::write("device", "[%s] %s %d", __FUNCTION__, handleNames[handle].c_str(), toRead);
+	logger::write("device", "[%s] %s %d", __FUNCTION__, handleNames[handle].c_str(), bufferSize);
 	auto file = (std::ifstream*)handle;
-	file->read((char*)buffer, toRead);
+	file->read((char*)buffer, bufferSize);
 	return (uint32_t)file->gcount();
 }
 
@@ -117,35 +118,35 @@ int rage::fiDeviceLocal::ReadFile(const char* fileName, void* buffer, int size)
 	return (bytesRead == (int)fileSize) ? bytesRead : -1;
 }
 
-uint32_t rage::fiDeviceLocal::ReadBulk(HANDLE handle, uint64_t ptr, char* buffer, uint32_t toRead)
+int rage::fiDeviceLocal::ReadBulk(HANDLE handle, uint64_t offset, void* buffer, int bufferSize)
 {
-	logger::write("device", "[%s] %s %d", __FUNCTION__, handleNames[handle].c_str(), toRead);
+	logger::write("device", "[%s] %s %d", __FUNCTION__, handleNames[handle].c_str(), bufferSize);
 	auto file = (std::ifstream*)handle;
-	file->seekg(ptr);
-	return Read(handle, buffer, toRead);
+	file->seekg(offset);
+	return Read(handle, buffer, bufferSize);
 }
 
-uint32_t rage::fiDeviceLocal::ReadBulkOverlapped(HANDLE handle, uint64_t ptr, char* buffer, uint32_t toRead)
+int rage::fiDeviceLocal::ReadBulkOverlapped(HANDLE handle, uint64_t offset, char* buffer, int bufferSize)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
-	return ReadBulk(handle, ptr, buffer, toRead);
+	return ReadBulk(handle, offset, buffer, bufferSize);
 }
 
-uint32_t rage::fiDeviceLocal::WriteBulk(HANDLE handle, uint64_t offset, const void* buffer, uint32_t length)
-{
-	logger::write("device", "[%s]", __FUNCTION__);
-	return 0;
-}
-
-uint32_t rage::fiDeviceLocal::Write(HANDLE handle, const void* buffer, uint32_t length)
+int rage::fiDeviceLocal::WriteBulk(HANDLE handle, uint64_t offset, const void* inBuffer, int bufferSize)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-uint32_t rage::fiDeviceLocal::Seek(HANDLE handle, int32_t distance, uint32_t method)
+int rage::fiDeviceLocal::Write(HANDLE handle, const void* buffer, int bufferSize)
 {
-	return (uint32_t)Seek64(handle, (int64_t)distance, method);
+	logger::write("device", "[%s]", __FUNCTION__);
+	return 0;
+}
+
+int rage::fiDeviceLocal::Seek(HANDLE handle, int offset, uint32_t method)
+{
+	return (uint32_t)Seek64(handle, (int64_t)offset, method);
 }
 
 uint64_t rage::fiDeviceLocal::Seek64(HANDLE handle, int64_t distance, uint32_t method)
@@ -175,14 +176,14 @@ uint32_t rage::fiDeviceLocal::CloseBulk(HANDLE handle)
 	return Close(handle);
 }
 
-uint32_t rage::fiDeviceLocal::CloseBulkWrap(HANDLE handle)
+uint32_t rage::fiDeviceLocal::CloseBulkOverlapped(HANDLE handle)
 {
 	return CloseBulk(handle);
 }
 
-uint32_t rage::fiDeviceLocal::Size(HANDLE handle)
+int rage::fiDeviceLocal::Size(HANDLE handle)
 {
-	return (uint32_t)Size64(handle);
+	return (int)Size64(handle);
 }
 
 uint64_t rage::fiDeviceLocal::Size64(HANDLE handle)
@@ -194,7 +195,7 @@ uint64_t rage::fiDeviceLocal::Size64(HANDLE handle)
 	return end;
 }
 
-uint32_t rage::fiDeviceLocal::Flush()
+int rage::fiDeviceLocal::Flush(HANDLE handle)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
@@ -230,18 +231,18 @@ bool rage::fiDeviceLocal::UnmakeDirectory(const char* dir)
 	return false;
 }
 
-uint64_t rage::fiDeviceLocal::GetDiskFreeSpaceDir(const char* dir)
+uint64_t rage::fiDeviceLocal::GetAvailableDiskSpace(const char* dir)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-void rage::fiDeviceLocal::NullSub()
+void rage::fiDeviceLocal::Sanitize(HANDLE handle)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 }
 
-uint64_t rage::fiDeviceLocal::GetFileSizes(void* files, void* sizes)
+uint64_t rage::fiDeviceLocal::GetFileSize(void* files, void* sizes)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
@@ -257,7 +258,7 @@ uint64_t rage::fiDeviceLocal::GetFileSize(const char* fileName)
 	return size;
 }
 
-uint64_t rage::fiDeviceLocal::GetFileTimes(void* files, void* times)
+uint64_t rage::fiDeviceLocal::GetFileTime(void* files, void* times)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
@@ -279,7 +280,7 @@ bool rage::fiDeviceLocal::SetFileTime(const char* fileName, uint64_t fileTime)
 	return false;
 }
 
-HANDLE rage::fiDeviceLocal::FindFileBegin(const char* path, const char* wildcard, rage::fiFindData* findData)
+HANDLE rage::fiDeviceLocal::FindFileBegin(const char* path, const char* wildcard, rage::fiFindData& findData)
 {
 	logger::write("device", "[%s] %s %s", __FUNCTION__, path, wildcard);
 	WIN32_FIND_DATAW foundData;
@@ -303,18 +304,18 @@ HANDLE rage::fiDeviceLocal::FindFileBegin(const char* path, const char* wildcard
 	return firstFileHandle;
 }
 
-HANDLE rage::fiDeviceLocal::FindFileBegin(const char* path, rage::fiFindData* findData)
+HANDLE rage::fiDeviceLocal::FindFileBegin(const char* path, rage::fiFindData& findData)
 {
 	return FindFileBegin(path, "*", findData);
 }
 
-bool rage::fiDeviceLocal::FindFileNext(HANDLE handle, rage::fiFindData* findData)
+bool rage::fiDeviceLocal::FindFileNext(HANDLE handle, rage::fiFindData& outData)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	WIN32_FIND_DATAW foundData;
 	bool fileFound = FindNextFileW(handle, &foundData) != 0;
 	if (fileFound)
-		ConvertFoundData(&foundData, findData);
+		ConvertFoundData(&foundData, outData);
 	return fileFound;
 }
 
@@ -324,13 +325,13 @@ int rage::fiDeviceLocal::FindFileEnd(HANDLE handle)
 	return (FindClose(handle) != 0) ? 0 : -1;
 }
 
-rage::fiDevice* rage::fiDeviceLocal::GetLowLevelDevice()
+const rage::fiDevice* rage::fiDeviceLocal::GetLowLevelDevice()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return this;
 }
 
-void* rage::fiDeviceLocal::FixRelativeName(char* dest, int length, const char* source)
+char* rage::fiDeviceLocal::FixRelativeName(char* dest, int length, const char* source)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	memcpy(dest, source, length);
@@ -357,70 +358,70 @@ bool rage::fiDeviceLocal::SetAttributes(const char* fileName, uint32_t attribute
 	return false;
 }
 
-uint64_t rage::fiDeviceLocal::GetRootDeviceId(const char*)
+uint32_t rage::fiDeviceLocal::GetRootDeviceId(const char*)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 1;
 }
 
-uint32_t rage::fiDeviceLocal::IsMemoryMappedDevice()
+bool rage::fiDeviceLocal::IsMemoryMappedDevice()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
-	return 0;
+	return false;
 }
 
-bool rage::fiDeviceLocal::SafeRead(HANDLE handle, void* buffer, uint32_t length)
+bool rage::fiDeviceLocal::SafeRead(HANDLE handle, void* outBuffer, int size)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	uint32_t offset = 0;
-	if (length == 0)
+	if (size == 0)
 		return true;
 	for (;;)
 	{
-		uint32_t bytesRead = Read(handle, (char*)buffer + offset, length - offset);
+		uint32_t bytesRead = Read(handle, (char*)outBuffer + offset, size - offset);
 		if (bytesRead == 0)
 			break;
 		offset += bytesRead;
-		if (offset >= length)
+		if (offset >= size)
 			return true;
 	}
 	return false;
 }
 
-bool rage::fiDeviceLocal::SafeWrite(HANDLE handle, const void* buffer, uint32_t length)
+bool rage::fiDeviceLocal::SafeWrite(HANDLE handle, const void* buffer, int size)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return false;
 }
 
-int rage::fiDeviceLocal::GetResourceInfos(void* resources, fiResourceInfo** flags)
+int rage::fiDeviceLocal::GetResourceInfo(void* resources, rage::fiResourceInfo** flags)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-uint32_t rage::fiDeviceLocal::GetResourceInfo(const char* fileName, rage::fiResourceInfo* flags)
+int rage::fiDeviceLocal::GetResourceInfo(const char* fileName, rage::fiResourceInfo* flags)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-int32_t rage::fiDeviceLocal::IsValidHandle()
+uint32_t rage::fiDeviceLocal::GetEncryptionKey()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-uint32_t rage::fiDeviceLocal::GetBulkOffset(HANDLE handle)
+bool rage::fiDeviceLocal::IsValidHandle(HANDLE handle)
+{
+	logger::write("device", "[%s]", __FUNCTION__);
+	return 0;
+}
+
+uint64_t rage::fiDeviceLocal::GetBulkOffset(HANDLE handle)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 1;
-}
-
-uint32_t rage::fiDeviceLocal::ReturnZero()
-{
-	logger::write("device", "[%s]", __FUNCTION__);
-	return 0;
 }
 
 uint32_t rage::fiDeviceLocal::GetPhysicalSortKey(const char*)
@@ -435,13 +436,13 @@ bool rage::fiDeviceLocal::IsRpf()
 	return false;
 }
 
-uint8_t rage::fiDeviceLocal::GetRpfVersion()
+uint64_t rage::fiDeviceLocal::GetRpfVersion()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
-	return (uint8_t)-1;
+	return -1;
 }
 
-rage::fiDevice* rage::fiDeviceLocal::GetRpfDevice()
+const rage::fiDevice* rage::fiDeviceLocal::GetRpfDevice()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return this;
@@ -453,7 +454,7 @@ bool rage::fiDeviceLocal::IsCloud()
 	return false;
 }
 
-uint64_t rage::fiDeviceLocal::GetPackfileIndex()
+bool rage::fiDeviceLocal::IsZip()
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
@@ -471,19 +472,19 @@ bool rage::fiDeviceLocal::SupportsOverlappedIO()
 	return false;
 }
 
-uint32_t rage::fiDeviceLocal::GetClampedBufferSize()
+uint32_t rage::fiDeviceLocal::GetClampedBufferSize(uint64_t, int)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-uint64_t rage::fiDeviceLocal::GetFinalOffset()
+uint64_t rage::fiDeviceLocal::GetFinalOffset(uint64_t)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
 }
 
-uint64_t rage::fiDeviceLocal::IsOverlappedRequestFinished(uint64_t, int)
+bool rage::fiDeviceLocal::IsOverlappedRequestFinished(uint64_t, int)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
 	return 0;
@@ -501,14 +502,14 @@ int rage::fiDeviceLocal::CloseMapping(HANDLE mappingHandle, void* mappedView)
 	return 0;
 }
 
-void rage::fiDeviceLocal::ConvertFoundData(LPWIN32_FIND_DATAW foundDataWin, rage::fiFindData* foundDataRage)
+void rage::fiDeviceLocal::ConvertFoundData(LPWIN32_FIND_DATAW foundDataWin, rage::fiFindData& foundDataRage)
 {
 	logger::write("device", "[%s]", __FUNCTION__);
-	WideCharToMultiByte(0xFDE9u, 0, foundDataWin->cFileName, -1, foundDataRage->fileName, 256, nullptr, nullptr);
-	for (uint8_t i = 0; i < (uint8_t)strlen(foundDataRage->fileName); ++i)
-		if (foundDataRage->fileName[i] == '/')
-			foundDataRage->fileName[i] = '\\';
-	foundDataRage->lastWriteTime = foundDataWin->ftLastWriteTime;
-	foundDataRage->fileAttributes = foundDataWin->dwFileAttributes;
-	foundDataRage->fileSize = *(uint64_t*)(&foundDataWin->nFileSizeHigh);
+	WideCharToMultiByte(0xFDE9u, 0, foundDataWin->cFileName, -1, foundDataRage.fileName, 256, nullptr, nullptr);
+	for (uint8_t i = 0; i < (uint8_t)strlen(foundDataRage.fileName); ++i)
+		if (foundDataRage.fileName[i] == '/')
+			foundDataRage.fileName[i] = '\\';
+	foundDataRage.lastWriteTime = foundDataWin->ftLastWriteTime;
+	foundDataRage.fileAttributes = foundDataWin->dwFileAttributes;
+	foundDataRage.fileSize = *(uint64_t*)(&foundDataWin->nFileSizeHigh);
 }
