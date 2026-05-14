@@ -29,4 +29,4 @@ If you encounter issues, please either open an issue on the repo, or raise it di
 
 ## LICENSE
 
-Please **DO NOT REDISTRIBUTE** compiled binaries without explicit approval.
+Please **DO NOT REDISTRIBUTE** compiled binaries, and instead link to the [official release](https://www.nexusmods.com/reddeadredemption2/mods/8926).
