@@ -1,7 +1,7 @@
 #include "main.h"
 
-bool(*ParseHeaderOrig)(rage::fiPackfile*, const char*, bool, void*, rage::fiResourceInfo*, bool);
-bool ParseHeaderHook(rage::fiPackfile* a1, const char* name, bool readHeader, void* customHeader, rage::fiResourceInfo* a5, bool a6)
+bool(*ParseHeaderOrig)(void*, const char*, bool, void*, rage::fiResourceInfo*, bool);
+bool ParseHeaderHook(void* a1, const char* name, bool readHeader, void* customHeader, rage::fiResourceInfo* a5, bool a6)
 {
 	logger::log("mods", "[%s] parsing header /%s", __FUNCTION__, name);
 	bool ret = ParseHeaderOrig(a1, name, readHeader, customHeader, a5, a6);

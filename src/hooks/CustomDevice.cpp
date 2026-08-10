@@ -15,17 +15,56 @@
 	I used this for the example: https://hu.gta5-mods.com/maps/community-mission-row-pd
 */
 
-rage::fiDeviceLocal* platformDevice;
-rage::fiDeviceLocal* platformDeviceCRC;
-rage::fiDeviceLocal* commonDevice;
-rage::fiDeviceLocal* commonDeviceCRC;
-rage::fiDeviceLocal* dlcDevice;
+rage::fiDeviceRelative* dlcPackDevice;
 
-bool IsCustomDevice(rage::fiDeviceLocal* dev)
+rage::fiDeviceRelative* commonDevice;
+rage::fiDeviceRelative* commonDeviceCRC;
+rage::fiDeviceRelative* platformDevice;
+rage::fiDeviceRelative* platformDeviceCRC;
+
+rage::fiDeviceRelative* audioDevice;
+rage::fiDeviceRelative* audioSfxDevice;
+
+rage::fiDeviceRelative* updateDevice;
+
+bool IsCustomDevice(rage::fiDevice* dev)
 {
-	if (dev == platformDevice || dev == platformDeviceCRC || dev == commonDevice || dev == commonDeviceCRC || dev == dlcDevice)
+	if (dev == platformDevice || dev == platformDeviceCRC || dev == commonDevice || dev == commonDeviceCRC)
 		return true;
 	return false;
+}
+
+void MountMods() {
+	dlcPackDevice->MountAs("dlcpacks:/");
+	commonDevice->MountAs("common:/");
+	commonDeviceCRC->MountAs("commoncrc:/");
+	platformDevice->MountAs("platform:/");
+	platformDeviceCRC->MountAs("platformcrc:/");
+	audioDevice->MountAs("audio:/");
+	audioSfxDevice->MountAs("audio:/sfx/");
+	updateDevice->MountAs("update:/");
+}
+
+void UnmountMods() {
+	rage::fiDevice::Unmount(dlcPackDevice);
+	rage::fiDevice::Unmount(commonDevice);
+	rage::fiDevice::Unmount(commonDeviceCRC);
+	rage::fiDevice::Unmount(platformDevice);
+	rage::fiDevice::Unmount(platformDeviceCRC);
+	rage::fiDevice::Unmount(audioDevice);
+	rage::fiDevice::Unmount(audioSfxDevice);
+	rage::fiDevice::Unmount(updateDevice);
+}
+
+// The game remounts the update packfiles, which unintentionally disables our modified files from loading, 
+// so we remount our mod devices at the same time to avoid this issue.
+bool(*RemountUpdateOrig)();
+bool RemountUpdateHook()
+{
+	UnmountMods();
+	bool result = RemountUpdateOrig();
+	MountMods();
+	return result;
 }
 
 void(*InitialMountOrig)();
@@ -38,52 +77,37 @@ void InitialMountHook()
 
 	logger::write("device", "[%s] Mods path: %s", __FUNCTION__, cwd.string().c_str());
 
-	rage::fiDeviceLocal* rootDevice = new rage::fiDeviceLocal();
-	rootDevice->SetPath(cwd.string().c_str(), true, nullptr);
+	rage::fiDeviceRelative* rootDevice = new rage::fiDeviceRelative();
+	rootDevice->Init(cwd.string().c_str(), true, nullptr);
 
-	if (rootDevice->Mount("mods:/"))
+	if (rootDevice->MountAs("mods:/"))
 		logger::write("device", "[%s] Root device mounted!", __FUNCTION__);
 
-	platformDevice = new rage::fiDeviceLocal();
-	platformDeviceCRC = new rage::fiDeviceLocal();
-	commonDevice = new rage::fiDeviceLocal();
-	commonDeviceCRC = new rage::fiDeviceLocal();
-	dlcDevice = new rage::fiDeviceLocal();
+	dlcPackDevice = new rage::fiDeviceRelative();
 
-	platformDevice->SetPath("mods:/platform/", true, nullptr);
-	platformDevice->Mount("platform:/");
+	commonDevice = new rage::fiDeviceRelative();
+	commonDeviceCRC = new rage::fiDeviceRelative();
 
-	platformDeviceCRC->SetPath("mods:/platform/", true, nullptr);
-	platformDeviceCRC->Mount("platformcrc:/");
+	platformDevice = new rage::fiDeviceRelative();
+	platformDeviceCRC = new rage::fiDeviceRelative();
 
-	commonDevice->SetPath("mods:/common/", true, nullptr);
-	commonDevice->Mount("common:/");
+	audioDevice = new rage::fiDeviceRelative();
+	audioSfxDevice = new rage::fiDeviceRelative();
 
-	commonDeviceCRC->SetPath("mods:/common/", true, nullptr);
-	commonDeviceCRC->Mount("commoncrc:/");
+	updateDevice = new rage::fiDeviceRelative();
 
-	dlcDevice->SetPath("mods:/dlcpacks/", true, nullptr);
-	dlcDevice->Mount("dlcpacks:/");
-}
+	dlcPackDevice->Init("mods:/x64/dlcpacks", true, rootDevice);
+	commonDevice->Init("mods:/common", true, rootDevice);
+	commonDeviceCRC->Init("mods:/common", true, rootDevice);
+	platformDevice->Init("mods:/x64", true, rootDevice);
+	platformDeviceCRC->Init("mods:/x64", true, rootDevice);
+	audioDevice->Init("mods:/x64/audio", true, rootDevice);
+	audioSfxDevice->Init("mods:/x64/audio/sfx", true, rootDevice);
+	updateDevice->Init("mods:/update", true, rootDevice);
 
-static memory::func<rage::fiDevice*, const char*, bool, bool> GetDeviceHook("48 89 5c 24 ? 48 89 6c 24 ? 48 89 74 24 ? 57 48 83 ec ? 41 8a f0 40 8a ea 41 b8");
+	MountMods();
 
-char (*OpenArchiveOrig)(rage::fiPackfile* a1, const char* path, char smth, int32_t type, __int64 a5, __int64 a6, bool a7);
-char OpenArchiveHook(rage::fiPackfile* a1, const char* path, char smth, int32_t type, __int64 a5, __int64 a6, bool a7)
-{
-	auto device = GetDeviceHook(path, true, true);
-	if (device && IsCustomDevice((rage::fiDeviceLocal*)device))
-	{
-		if (device->GetAttributes(path) & FILE_ATTRIBUTE_DIRECTORY)
-		{
-			logger::write("device", "[%s] Archive %s is a directory!", __FUNCTION__, path);
-			type = 2;
-		}
-	}
-
-	logger::write("device", "[%s] Opening archive %s %d %d", __FUNCTION__, path, smth, type);
-
-	return OpenArchiveOrig(a1, path, smth, type, a5, a6, a7);
+	logger::write("device", "[%s] Mounted mod devices.", __FUNCTION__);
 }
 
 static memory::InitFuncs CustomDevice([] {
@@ -92,6 +116,7 @@ static memory::InitFuncs CustomDevice([] {
 		InitialMountOrig = mem.add(1).rip().as<decltype(InitialMountOrig)>();
 		mem.set_call(InitialMountHook);
 
-		memory::scan("48 89 5c 24 ? 48 89 54 24 ? 55 56 57 41 54 41 55 41 56 41 57 48 8d 6c 24 ? 48 81 ec ? ? ? ? 4c 8b bd")
-			.hook(OpenArchiveHook, &OpenArchiveOrig);
+		auto mem2 = memory::scan("E8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 88 98 00 01 00 00");
+		RemountUpdateOrig = mem2.add(1).rip().as<decltype(RemountUpdateOrig)>();
+		mem2.set_call(RemountUpdateHook);
 });

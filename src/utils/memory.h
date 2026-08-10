@@ -63,6 +63,7 @@ public:
 	{
 		memory::base() = (uintptr_t)GetModuleHandle(NULL);
 		memory::virtual_mem() = memory((uintptr_t)VirtualAlloc((void*)(base() + 0x20000000), 1024, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE), false);
+		memory::oriVfts().reserve(8);
 
 		auto status = MH_Initialize();
 		if (status != MH_OK)
@@ -253,6 +254,68 @@ public:
 		return true;
 	}
 
+	// VFT Hooking
+
+	template<typename T>
+	inline static uintptr_t* get_vft(T* obj)
+	{
+		return *(uintptr_t**)obj;
+	}
+
+	/// <summary>
+	/// Used to hook VTables, affecting all objects that use this VTable. Note that this skips the destructor.
+	/// </summary>
+	/// <typeparam name="T">The type of the object that has the hooking functions.</typeparam>
+	/// <param name="hookObj">The instance of the object, to access it's VTable.</param>
+	/// <param name="funcCount">The amount of functions to hook.</param>
+	template<typename T>
+	inline void hook_vft(T* hookObj, uint32_t funcCount)
+	{
+		uintptr_t* targetVft = (uintptr_t*)address;
+		uintptr_t* hookVft = get_vft(hookObj);
+
+		VftEntry entry{};
+		entry.vft = address;
+		entry.count = funcCount;
+		memcpy(entry.original, targetVft, funcCount * sizeof(uintptr_t));
+		oriVfts().push_back(entry);
+
+		scoped_unlock lock((uintptr_t)targetVft, funcCount * sizeof(uintptr_t));
+		memcpy(targetVft + 1, hookVft + 1, (funcCount - 1) * sizeof(uintptr_t));
+	}
+
+	template<typename RetType, typename ClassType, typename... Args>
+	inline static RetType call_original_vft_func(ClassType thisPtr, uint32_t index, Args&&... args)
+	{
+		using FuncType = RetType(__fastcall*)(const void*, std::decay_t<Args>...);
+
+		uintptr_t key = (uintptr_t)get_vft(thisPtr);
+
+		thread_local uintptr_t s_lastKey = 0;
+		thread_local VftEntry* s_lastEntry = nullptr;
+
+		VftEntry* entry = (key == s_lastKey && s_lastEntry) ? s_lastEntry : nullptr;
+
+		if (!entry)
+		{
+			auto& entries = oriVfts();
+			auto it = std::find_if(entries.begin(), entries.end(),
+				[key](const VftEntry& e) { return e.vft == key; });
+
+			if (it == entries.end())
+				throw std::runtime_error("Unable to find original vft table.");
+
+			entry = &*it;
+			s_lastKey = key;
+			s_lastEntry = entry;
+		}
+
+		if (index >= entry->count)
+			throw std::runtime_error("Index out of bounds in original vft table.");
+
+		return reinterpret_cast<FuncType>(entry->original[index])(thisPtr, std::forward<Args>(args)...);
+	}
+
 	static memory scan(const char* signature, bool ignoreFail = false)
 	{
 		static auto pattern_to_byte = [](const char* pattern) {
@@ -309,6 +372,19 @@ public:
 	}
 
 private:
+	struct VftEntry
+	{
+		uintptr_t vft;
+		uint32_t count;
+		uintptr_t original[128];
+	};
+
+	inline static std::vector<VftEntry>& oriVfts()
+	{
+		static std::vector<VftEntry> entries;
+		return entries;
+	}
+
 	struct scoped_unlock
 	{
 		DWORD rights;
