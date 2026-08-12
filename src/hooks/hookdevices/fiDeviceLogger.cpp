@@ -497,6 +497,7 @@ int rage::fiDeviceCustom::GetRelativeOffset()
 
 void rage::fiDeviceCustom::ShutdownPackfile()
 {
+    logger::write("device", "[%s] (%s)", __FUNCTION__, this->GetDeviceName());
     memory::call_original_vft_func<void>(this, 73);
 }
 
@@ -508,6 +509,7 @@ bool rage::fiDeviceCustom::ReInitializePackFile(const char* filePath, bool useNa
 
 void rage::fiDeviceCustom::UnInitializePackFile()
 {
+    logger::write("device", "[%s] (%s)", __FUNCTION__, this->GetDeviceName());
     memory::call_original_vft_func<void>(this, 75);
 }
 

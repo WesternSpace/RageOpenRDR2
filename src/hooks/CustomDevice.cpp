@@ -34,7 +34,7 @@ bool IsCustomDevice(rage::fiDevice* dev)
 	return false;
 }
 
-void MountMods() {
+static void MountMods() {
 	dlcPackDevice->MountAs("dlcpacks:/");
 	commonDevice->MountAs("common:/");
 	commonDeviceCRC->MountAs("commoncrc:/");
@@ -45,7 +45,7 @@ void MountMods() {
 	updateDevice->MountAs("update:/");
 }
 
-void UnmountMods() {
+static void UnmountMods() {
 	rage::fiDevice::Unmount(dlcPackDevice);
 	rage::fiDevice::Unmount(commonDevice);
 	rage::fiDevice::Unmount(commonDeviceCRC);
@@ -68,7 +68,7 @@ bool RemountUpdateHook()
 }
 
 void(*InitialMountOrig)();
-void InitialMountHook()
+static void InitialMountHook()
 {
 	InitialMountOrig();
 
@@ -110,6 +110,17 @@ void InitialMountHook()
 	logger::write("device", "[%s] Mounted mod devices.", __FUNCTION__);
 }
 
+// The game remounts the update packfiles, which unintentionally disables our modified files from loading, 
+// so we remount our mod devices at the same time to avoid this issue.
+bool(*RemountUpdateOrig)();
+static bool RemountUpdateHook()
+{
+	UnmountMods();
+	bool result = RemountUpdateOrig();
+	MountMods();
+	return result;
+}
+
 static memory::InitFuncs CustomDevice([] {
 
 		auto mem = memory::scan("0f b7 05 ? ? ? ? 48 03 c3 44 88 34 38 66 01 1d").add(21);
@@ -118,5 +129,5 @@ static memory::InitFuncs CustomDevice([] {
 
 		auto mem2 = memory::scan("E8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 88 98 00 01 00 00");
 		RemountUpdateOrig = mem2.add(1).rip().as<decltype(RemountUpdateOrig)>();
-		mem2.set_call(RemountUpdateHook);
+		mem2.set_call(RemountUpdateHook, true);
 });

@@ -7,10 +7,10 @@ using GetFileTimeFn = FILETIME(*)(void*, const char*);
 using GetFileSizeFn = uint64_t(*)(void*, const char*);
 using GetAttrsFn = uint64_t(*)(void*, const char*);
 
-inline OpenBulkFn g_origOpenBulk = nullptr;
-inline GetFileTimeFn g_origGetFileTime = nullptr;
-inline GetFileSizeFn g_origGetFileSize = nullptr;
-inline GetAttrsFn g_origGetAttribs = nullptr;
+static OpenBulkFn g_origOpenBulk = nullptr;
+static GetFileTimeFn g_origGetFileTime = nullptr;
+static GetFileSizeFn g_origGetFileSize = nullptr;
+static GetAttrsFn g_origGetAttribs = nullptr;
 
 static const uint8_t EXISTS = 1;
 static const uint8_t NOT_EXISTS = 2;

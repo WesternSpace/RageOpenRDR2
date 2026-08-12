@@ -6,30 +6,30 @@ inline bool(*OpenPackfile)(void*, const char*, bool, uint32_t, char*, uint32_t*,
 
 void InitRelativeDeviceHook(void* self, const char* path, bool allowRoot, void* parent)
 {
-	logger::write("device", "[fiDeviceRelative::Init] %s", path);
+	logger::write("device", "[rage::fiDeviceRelative::Init] %s", path);
 	InitRelativeDevice(self, path, allowRoot, parent);
 }
 
 bool MountRelativeDeviceHook(void* self, const char* mountPoint)
 {
-	logger::write("device", "[fiDeviceRelative::MountAs] %s (%s)", mountPoint, reinterpret_cast<rage::fiDeviceRelative*>(self)->GetDeviceName());
+	logger::write("device", "[rage::fiDeviceRelative::MountAs] %s (%s)", mountPoint, reinterpret_cast<rage::fiDeviceRelative*>(self)->GetDeviceName());
 
 	bool result = MountRelativeDevice(self, mountPoint);
 
 	if (!result)
-		logger::write("device", "[fiDeviceRelative::MountAs] Failed to mount as %s", mountPoint);
+		logger::write("device", "[rage::fiDeviceRelative::MountAs] Failed to mount as %s", mountPoint);
 
 	return result;
 }
 
-bool OpenPackfileHook(void* self, const char* fileName, bool unused, uint32_t cacheMode, char* packFileData, uint32_t* a6, bool a7)
+static bool OpenPackfileHook(void* self, const char* fileName, bool unused, uint32_t cacheMode, char* packFileData, uint32_t* a6, bool a7)
 {
-	logger::write("device", "[fiPackfile::Init] %s", fileName);
+	logger::write("device", "[rage::fiPackfile::Init] %s", fileName);
 
 	bool result = OpenPackfile(self, fileName, unused, cacheMode, packFileData, a6, a7);
 
 	if (!result)
-		logger::write("device", "[fiPackfile::Init] Failed to open %s", fileName);
+		logger::write("device", "[rage::fiPackfile::Init] Failed to open %s", fileName);
 
 	return result;
 }
