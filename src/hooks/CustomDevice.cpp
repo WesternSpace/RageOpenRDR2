@@ -56,17 +56,6 @@ static void UnmountMods() {
 	rage::fiDevice::Unmount(updateDevice);
 }
 
-// The game remounts the update packfiles, which unintentionally disables our modified files from loading, 
-// so we remount our mod devices at the same time to avoid this issue.
-bool(*RemountUpdateOrig)();
-bool RemountUpdateHook()
-{
-	UnmountMods();
-	bool result = RemountUpdateOrig();
-	MountMods();
-	return result;
-}
-
 void(*InitialMountOrig)();
 static void InitialMountHook()
 {
