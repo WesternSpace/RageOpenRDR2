@@ -16,7 +16,11 @@
 
 #include "hooks/DeviceLoggingHooks.h"
 
+#include "rdr2/rage/string.h"
 #include "rdr2/rage/fiDevice.h"
 #include "rdr2/rage/fiCollection.h"
 #include "rdr2/rage/fiDeviceRelative.h"
+
+#include "rdr2/game/MountableContent.h"
+
 #include "hooks/hookdevices/fiDeviceLogger.h"
