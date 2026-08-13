@@ -114,7 +114,7 @@ static bool RemountUpdateHook()
 uint32_t(*MountDlcContentOrig)(CMountableContent*, const char*);
 void(*UnmountDlcContentOrig)(CMountableContent*, const char*);
 
-static const char* GetDlcName(const char* path) {
+static const char* GetDlcName(const char* path, bool isPatchDlc = false) {
 	static char buffer[128];
 
 	const char* firstSlash = std::strchr(path, '/');
@@ -124,9 +124,15 @@ static const char* GetDlcName(const char* path) {
 
 	const char* nameStart = firstSlash + 1;
 	const char* secondSlash = static_cast<const char*>(std::memchr(nameStart, '/', std::strlen(nameStart)));
-
+	
 	if (!secondSlash)
 		return nullptr;
+
+	if (isPatchDlc)
+	{
+		nameStart = secondSlash + 1;
+		secondSlash = (nameStart + std::strlen(nameStart));
+	}
 
 	size_t len = static_cast<size_t>(secondSlash - nameStart);
 
@@ -139,6 +145,36 @@ static const char* GetDlcName(const char* path) {
 	return buffer;
 }
 
+static void MountModDlcSetupFile(const char* setupFilePath)
+{
+	if (dlcSetupDevice == nullptr)
+		dlcSetupDevice = new rage::fiDeviceRelative();
+
+	char namebuffer[64]{};
+
+	// Handle special dlc devices
+	if (std::strstr(setupFilePath, "update:/") != NULL)
+		dlcSetupDevice->Init("mods:/update", true, dlcPackDevice);
+	else if (std::strstr(setupFilePath, "rtp:/") != NULL)
+		dlcSetupDevice->Init("dlcpacks:/rtp", true, dlcPackDevice);
+	else if (std::strstr(setupFilePath, "/packs/base") != NULL)
+		dlcSetupDevice->Init("dlcpacks:/base", true, dlcPackDevice);
+	else if (std::strstr(setupFilePath, "ROWAssetPack") != NULL)
+		dlcSetupDevice->Init("dlcpacks:/rowassetpack", true, dlcPackDevice);
+	else if (std::strstr(setupFilePath, "RORAssetPack") != NULL)
+		dlcSetupDevice->Init("dlcpacks:/rowassetpack", true, dlcPackDevice);
+	else if (std::strstr(setupFilePath, "dlc_content_extra") != NULL)
+		dlcSetupDevice->Init("dlcpacks:/dlc_content_extra", true, dlcPackDevice);
+	else // Most common case
+	{
+		char namebuffer[64]{};
+		sprintf_s(namebuffer, "dlcpacks:/%s", GetDlcName(setupFilePath, std::strstr(setupFilePath, "/pack_patch") != NULL));
+		dlcSetupDevice->Init(namebuffer, true, dlcPackDevice);
+	}
+
+	dlcSetupDevice->MountAs("extra:/");
+}
+
 static uint32_t MountDlcSetupFileHook(CMountableContent* self, const char* deviceName)
 {
 	uint32_t result = MountDlcContentOrig(self, deviceName);
@@ -147,30 +183,7 @@ static uint32_t MountDlcSetupFileHook(CMountableContent* self, const char* devic
 	if (result != 0)
 		return result;
 
-	if (dlcSetupDevice == nullptr)
-		dlcSetupDevice = new rage::fiDeviceRelative();
-
-	char namebuffer[64]{};
-
-	// Handle special dlc devices
-	if (std::strstr(self->m_filename, "update:/") != NULL)
-		dlcSetupDevice->Init("mods:/update", true, dlcPackDevice);
-	else if (std::strstr(self->m_filename, "rtp:/") != NULL)
-		dlcSetupDevice->Init("dlcpacks:/rtp", true, dlcPackDevice);
-	else if (std::strstr(self->m_filename, "/packs/base/") != NULL)
-		dlcSetupDevice->Init("dlcpacks:/base", true, dlcPackDevice);
-	else if (std::strstr(self->m_filename, "ROWAssetPack") != NULL)
-		dlcSetupDevice->Init("dlcpacks:/rowassetpack", true, dlcPackDevice);
-	else if (std::strstr(self->m_filename, "dlc_content_extra") != NULL)
-		dlcSetupDevice->Init("dlcpacks:/dlc_content_extra", true, dlcPackDevice);
-	else // Most common case
-	{
-		char namebuffer[64]{};
-		sprintf_s(namebuffer, "dlcpacks:/%s", GetDlcName(self->m_filename));
-		dlcSetupDevice->Init(namebuffer, true, dlcPackDevice);
-	}
-
-	dlcSetupDevice->MountAs("extra:/");
+	MountModDlcSetupFile(self->m_filename);
 
 	return result;
 }
@@ -181,6 +194,27 @@ static void UnmountDlcSetupFileHook(CMountableContent* self, const char* deviceN
 		rage::fiDevice::Unmount(dlcSetupDevice);
 
 	UnmountDlcContentOrig(self, deviceName);
+}
+
+static bool MountDlcSetupPatchFileHook(rage::fiDeviceRelative* self, const char* mountPoint)
+{
+	bool result = self->MountAs(mountPoint);
+
+	// Mounting failed
+	if (!result)
+		return false;
+
+	MountModDlcSetupFile(self->GetDeviceName());
+
+	return true;
+}
+
+static bool UnmountDlcSetupPatchFileHook(const char* deviceName)
+{
+	if (dlcSetupDevice != nullptr)
+		rage::fiDevice::Unmount(dlcSetupDevice);
+
+	return rage::fiDevice::UnmountByName(deviceName);
 }
 
 static memory::InitFuncs CustomDevice([] {
@@ -200,4 +234,10 @@ static memory::InitFuncs CustomDevice([] {
 		auto mem4 = memory::scan("E8 ?? ?? ?? ?? 8B 8B F0 01 00 00 83 F9 01");
 		UnmountDlcContentOrig = mem4.add(1).rip().as<decltype(UnmountDlcContentOrig)>();
 		mem4.set_call(UnmountDlcSetupFileHook);
+
+		auto mem5 = memory::scan("E8 ?? ?? ?? ?? 84 C0 74 67 33 D2");
+		mem5.set_call(MountDlcSetupPatchFileHook);
+
+		auto mem6 = memory::scan("E8 ?? ?? ?? ?? 4C 8D 9C 24 40 02 00 00 49 8B 5B 18 49 8B 73 20 49 8B 7B 28 49 8B E3");
+		mem6.set_call(UnmountDlcSetupPatchFileHook);
 });

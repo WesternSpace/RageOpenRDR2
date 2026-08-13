@@ -19,6 +19,7 @@ namespace rage
 		virtual ~fiDevice() = default;
 
 		static bool Unmount(fiDevice* device);
+		static bool UnmountByName(const char* deviceName);
 
 		virtual HANDLE OpenFileWithAttribute(const char* fileName, bool readOnly, uint32_t dwShareMode, uint32_t dwFlagsAndAttributes) PURECALL
 		virtual HANDLE OpenFileHash(uint32_t* fileNameHash) PURECALL
