@@ -349,10 +349,6 @@ public:
 		auto dosHeader = (PIMAGE_DOS_HEADER)moduleBase;
 		auto ntHeaders = (PIMAGE_NT_HEADERS)((std::uint8_t*)moduleBase + dosHeader->e_lfanew);
 
-		constexpr auto offs = offsetof(IMAGE_DOS_HEADER, IMAGE_DOS_HEADER::e_lfanew);
-
-		auto sizzz = sizeof(IMAGE_DOS_HEADER);
-
 		auto sizeOfImage = ntHeaders->OptionalHeader.SizeOfImage;
 		auto patternBytes = pattern_to_byte(signature);
 		auto scanBytes = reinterpret_cast<std::uint8_t*>(moduleBase);
