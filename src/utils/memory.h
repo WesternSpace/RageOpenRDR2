@@ -160,6 +160,13 @@ public:
 			logger::write("info", "MH_EnableHook failed %d", (int)status);
 	}
 
+	template<typename T>
+	inline void hook_call(T hookFunc, T* orig, bool ret = false)
+	{
+		*orig = add(1).rip().as<T>();
+		set_call(hookFunc, ret);
+	}
+
 	template<typename RetType, typename... Args>
 	class func
 	{

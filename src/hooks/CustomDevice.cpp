@@ -15,49 +15,49 @@
 	I used this for the example: https://hu.gta5-mods.com/maps/community-mission-row-pd
 */
 
-rage::fiDeviceRelative* dlcPackDevice;
-rage::fiDeviceRelative* dlcSetupDevice;
+static rage::fiDeviceRelative* commonDevice;
+static rage::fiDeviceRelative* commonDeviceCrc;
 
-rage::fiDeviceRelative* commonDevice;
-rage::fiDeviceRelative* commonDeviceCRC;
-rage::fiDeviceRelative* platformDevice;
-rage::fiDeviceRelative* platformDeviceCRC;
+static rage::fiDeviceRelative* platformDevice;
+static rage::fiDeviceRelative* platformDeviceCrc;
 
-rage::fiDeviceRelative* audioDevice;
-rage::fiDeviceRelative* audioSfxDevice;
+static rage::fiDeviceRelative* updateDevice;
+static rage::fiDeviceRelative* updateCommonDevice;
+static rage::fiDeviceRelative* updateCommonDeviceCrc;
+static rage::fiDeviceRelative* updatePlatformDevice;
 
-rage::fiDeviceRelative* updateDevice;
+static rage::fiDeviceRelative* audioDevice;
+static rage::fiDeviceRelative* audioSfxDevice;
 
-bool IsCustomDevice(rage::fiDevice* dev)
+static rage::fiDeviceRelative* dlcPackDevice;
+
+static rage::fiDeviceRelative* dlcSetupDevice;
+
+static void MountMods() 
 {
-	if (dev == platformDevice || dev == platformDeviceCRC || dev == commonDevice || dev == commonDeviceCRC)
-		return true;
-	return false;
-}
-
-static void MountMods() {
-	dlcPackDevice->MountAs("dlcpacks:/");
 	commonDevice->MountAs("common:/");
-	commonDeviceCRC->MountAs("commoncrc:/");
+	commonDeviceCrc->MountAs("commoncrc:/");
+
 	platformDevice->MountAs("platform:/");
-	platformDeviceCRC->MountAs("platformcrc:/");
+	platformDeviceCrc->MountAs("platformcrc:/");
+
 	audioDevice->MountAs("audio:/");
 	audioSfxDevice->MountAs("audio:/sfx/");
-	updateDevice->MountAs("update:/");
 }
 
-static void UnmountMods() {
-	rage::fiDevice::Unmount(dlcPackDevice);
+static void UnmountMods() 
+{
 	rage::fiDevice::Unmount(commonDevice);
-	rage::fiDevice::Unmount(commonDeviceCRC);
+	rage::fiDevice::Unmount(commonDeviceCrc);
+
 	rage::fiDevice::Unmount(platformDevice);
-	rage::fiDevice::Unmount(platformDeviceCRC);
+	rage::fiDevice::Unmount(platformDeviceCrc);
+
 	rage::fiDevice::Unmount(audioDevice);
 	rage::fiDevice::Unmount(audioSfxDevice);
-	rage::fiDevice::Unmount(updateDevice);
 }
 
-void(*InitialMountOrig)();
+static void(*InitialMountOrig)();
 static void InitialMountHook()
 {
 	InitialMountOrig();
@@ -73,36 +73,55 @@ static void InitialMountHook()
 	if (rootDevice->MountAs("mods:/"))
 		logger::write("device", "[%s] Root device mounted!", __FUNCTION__);
 
-	dlcPackDevice = new rage::fiDeviceRelative();
-
 	commonDevice = new rage::fiDeviceRelative();
-	commonDeviceCRC = new rage::fiDeviceRelative();
+	commonDeviceCrc = new rage::fiDeviceRelative();
 
 	platformDevice = new rage::fiDeviceRelative();
-	platformDeviceCRC = new rage::fiDeviceRelative();
+	platformDeviceCrc = new rage::fiDeviceRelative();
+
+	updateDevice = new rage::fiDeviceRelative();
+	updateCommonDevice = new rage::fiDeviceRelative();
+	updateCommonDeviceCrc = new rage::fiDeviceRelative();
+	updatePlatformDevice = new rage::fiDeviceRelative();
 
 	audioDevice = new rage::fiDeviceRelative();
 	audioSfxDevice = new rage::fiDeviceRelative();
 
-	updateDevice = new rage::fiDeviceRelative();
+	dlcPackDevice = new rage::fiDeviceRelative();
 
-	dlcPackDevice->Init("mods:/x64/dlcpacks", true, rootDevice);
+
 	commonDevice->Init("mods:/common", true, rootDevice);
-	commonDeviceCRC->Init("mods:/common", true, rootDevice);
+	commonDeviceCrc->Init("mods:/common", true, rootDevice);
+
 	platformDevice->Init("mods:/x64", true, rootDevice);
-	platformDeviceCRC->Init("mods:/x64", true, rootDevice);
+	platformDeviceCrc->Init("mods:/x64", true, rootDevice);
+
+	updateDevice->Init("mods:/update", true, rootDevice);
+	updateCommonDevice->Init("mods:/common", true, rootDevice);
+	updateCommonDeviceCrc->Init("mods:/common", true, rootDevice);
+	updatePlatformDevice->Init("mods:/x64", true, rootDevice);
+
 	audioDevice->Init("mods:/x64/audio", true, rootDevice);
 	audioSfxDevice->Init("mods:/x64/audio/sfx", true, rootDevice);
-	updateDevice->Init("mods:/update", true, rootDevice);
+
+	dlcPackDevice->Init("mods:/x64/dlcpacks", true, rootDevice);
+
+	// These devices are not affected by the remount
+	updateDevice->MountAs("update:/");
+	updateCommonDevice->MountAs("update_common:/");
+	updateCommonDeviceCrc->MountAs("update_commoncrc:/");
+	updatePlatformDevice->MountAs("update_platfrom:/");
+
+	dlcPackDevice->MountAs("dlcpacks:/");
 
 	MountMods();
 
 	logger::write("device", "[%s] Mounted mod devices.", __FUNCTION__);
 }
 
-// The game remounts the update packfiles, which unintentionally disables our modified files from loading, 
+// The game remounts the update packfiles, which unintentionally disables some of our modified files from loading, 
 // so we remount our mod devices at the same time to avoid this issue.
-bool(*RemountUpdateOrig)();
+static bool(*RemountUpdateOrig)();
 static bool RemountUpdateHook()
 {
 	UnmountMods();
@@ -111,8 +130,8 @@ static bool RemountUpdateHook()
 	return result;
 }
 
-uint32_t(*MountDlcContentOrig)(CMountableContent*, const char*);
-void(*UnmountDlcContentOrig)(CMountableContent*, const char*);
+static uint32_t(*MountDlcContentOrig)(CMountableContent*, const char*);
+static void(*UnmountDlcContentOrig)(CMountableContent*, const char*);
 
 static const char* GetDlcName(const char* path, bool isPatchDlc = false) {
 	static char buffer[128];
@@ -219,25 +238,15 @@ static bool UnmountDlcSetupPatchFileHook(const char* deviceName)
 
 static memory::InitFuncs CustomDevice([] {
 
-		auto mem = memory::scan("0f b7 05 ? ? ? ? 48 03 c3 44 88 34 38 66 01 1d").add(21);
-		InitialMountOrig = mem.add(1).rip().as<decltype(InitialMountOrig)>();
-		mem.set_call(InitialMountHook);
+	memory::scan("0f b7 05 ? ? ? ? 48 03 c3 44 88 34 38 66 01 1d").add(21).hook_call(InitialMountHook, &InitialMountOrig);
 
-		auto mem2 = memory::scan("E8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 88 98 00 01 00 00");
-		RemountUpdateOrig = mem2.add(1).rip().as<decltype(RemountUpdateOrig)>();
-		mem2.set_call(RemountUpdateHook, true);
+	memory::scan("E8 ?? ?? ?? ?? E8 ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 88 98 00 01 00 00").hook_call(RemountUpdateHook, &RemountUpdateOrig, true);
 
-		auto mem3 = memory::scan("E8 ?? ?? ?? ?? 85 C0 75 6C 33 D2");
-		MountDlcContentOrig = mem3.add(1).rip().as<decltype(MountDlcContentOrig)>();
-		mem3.set_call(MountDlcSetupFileHook, true);
+	memory::scan("E8 ?? ?? ?? ?? 85 C0 75 6C 33 D2").hook_call(MountDlcSetupFileHook, &MountDlcContentOrig, true);
 
-		auto mem4 = memory::scan("E8 ?? ?? ?? ?? 8B 8B F0 01 00 00 83 F9 01");
-		UnmountDlcContentOrig = mem4.add(1).rip().as<decltype(UnmountDlcContentOrig)>();
-		mem4.set_call(UnmountDlcSetupFileHook);
+	memory::scan("E8 ?? ?? ?? ?? 8B 8B F0 01 00 00 83 F9 01").hook_call(UnmountDlcSetupFileHook, &UnmountDlcContentOrig);
 
-		auto mem5 = memory::scan("E8 ?? ?? ?? ?? 84 C0 74 67 33 D2");
-		mem5.set_call(MountDlcSetupPatchFileHook);
+	memory::scan("E8 ?? ?? ?? ?? 84 C0 74 67 33 D2").set_call(MountDlcSetupPatchFileHook);
 
-		auto mem6 = memory::scan("E8 ?? ?? ?? ?? 4C 8D 9C 24 40 02 00 00 49 8B 5B 18 49 8B 73 20 49 8B 7B 28 49 8B E3");
-		mem6.set_call(UnmountDlcSetupPatchFileHook);
+	memory::scan("E8 ?? ?? ?? ?? 4C 8D 9C 24 40 02 00 00 49 8B 5B 18 49 8B 73 20 49 8B 7B 28 49 8B E3").set_call(UnmountDlcSetupPatchFileHook);
 });
