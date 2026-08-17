@@ -44,16 +44,6 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD  dwReason, LPVOID lpReserved)
 
 		memory::init();
 
-		if (config::get_config<bool>("console"))
-		{
-			AllocConsole();
-
-			FILE* unused = nullptr;
-			freopen_s(&unused, "CONIN$", "r", stdin);
-			freopen_s(&unused, "CONOUT$", "w", stdout);
-			freopen_s(&unused, "CONOUT$", "w", stderr);
-		}
-
 		if (!memory::HookApi(L"kernel32.dll", "GetSystemTimeAsFileTime", (PVOID)HookGetSystemTimeAsFileTime, (PVOID*)&origGetSystemTimeAsFileTime)) {
 			logger::write("info", "Hooking failed error (%ld)", GetLastError());
 		}
