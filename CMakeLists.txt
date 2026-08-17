@@ -23,7 +23,6 @@ GroupSources(${CMAKE_SOURCE_DIR}/src "Source Files")
 add_subdirectory("src/vendor/minhook")
 add_subdirectory("src/vendor/spdlog")
 
-
 add_library(RageOpenRDR2 SHARED ${PROJECT_SOURCE_FILES})
 add_dependencies(RageOpenRDR2 minhook spdlog)
 
@@ -50,19 +49,12 @@ set_target_properties( minhook
 )
 
 set_target_properties( spdlog
-
     PROPERTIES
-
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/LIB"
-
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/LIB"
-
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/LIB"
-
     LIBRARY_OUTPUT_DIRECTORY_DEBUG "${CMAKE_BINARY_DIR}/LIB"
-
     LIBRARY_OUTPUT_DIRECTORY_RELEASE "${CMAKE_BINARY_DIR}/LIB"
-
 )
 
 set(CMAKE_CONFIGURATION_TYPES Debug Release RelWithDebInfo)
