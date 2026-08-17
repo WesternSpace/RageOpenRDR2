@@ -1,4 +1,9 @@
 #include "main.h"
+#include "utils/config.h"
+#include "utils/log.h"
+#include "utils/memory.h"
+
+#include <cstdio>
 
 static bool bInited = false;
 void (*origGetSystemTimeAsFileTime)(LPFILETIME lpSystemTimeAsFileTime);

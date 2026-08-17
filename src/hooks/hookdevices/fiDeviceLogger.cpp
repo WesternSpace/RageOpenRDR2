@@ -1,4 +1,11 @@
-#include "main.h"
+#include "fiDeviceLogger.h"
+#include "utils/memory.h"
+#include "utils/log.h"
+
+#include <cstdio>
+#include <string>
+#include <unordered_map>
+
 
 std::unordered_map<HANDLE, std::string> handleNames;
 

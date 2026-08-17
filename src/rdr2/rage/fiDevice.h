@@ -1,5 +1,14 @@
 #pragma once
 
+#include <Windows.h>
+#include <cstdint>
+#include <stdexcept>
+#include <string>
+
+// We cannot define the functions as pure virtual functions
+// else we can't interact with the functions as we want.
+#define PURECALL { throw std::logic_error(std::string("Pure virtual call reached in ") + __FUNCTION__); }
+
 namespace rage
 {
 	// Same as in V

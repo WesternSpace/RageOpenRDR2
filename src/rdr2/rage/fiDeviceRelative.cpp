@@ -1,4 +1,6 @@
-#include "main.h"
+#include "fiDeviceRelative.h"
+#include "utils/memory.h"
+#include "hooks/DeviceLoggingHooks.h"
 
 rage::fiDeviceRelative::fiDeviceRelative()
 {

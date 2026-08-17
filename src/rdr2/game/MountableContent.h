@@ -1,5 +1,9 @@
 #pragma once
 
+#include "rdr2/rage/fiDevice.h"
+#include "rdr2/rage/fiDeviceRelative.h"
+#include "rdr2/rage/string.h"
+
 class CMountableContent 
 {
 public:

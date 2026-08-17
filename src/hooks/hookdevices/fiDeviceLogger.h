@@ -1,5 +1,7 @@
 #pragma once
 
+#include "rdr2/rage/fiCollection.h"
+
 namespace rage
 {
 	class fiDeviceCustom : public fiCollection

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdarg>
+
 namespace logger
 {
 	void init();

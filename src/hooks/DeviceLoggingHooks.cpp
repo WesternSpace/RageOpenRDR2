@@ -1,4 +1,8 @@
-#include "main.h"
+#include "DeviceLoggingHooks.h"
+#include "hookdevices/fiDeviceLogger.h"
+#include "utils/log.h"
+#include "utils/memory.h"
+#include "rdr2/rage/fiDeviceRelative.h"
 
 inline void(*InitRelativeDevice)(void*, const char*, bool, void*);
 inline bool(*MountRelativeDevice)(void*, const char*);

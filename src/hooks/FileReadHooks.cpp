@@ -1,6 +1,10 @@
-#include "main.h"
-#include <unordered_map>
+#include "utils/log.h"
+#include "utils/memory.h"
+
+#include <Windows.h>
 #include <shared_mutex>
+#include <string>
+#include <unordered_map>
 
 using OpenBulkFn = HANDLE(*)(void*, const char*, __int64*);
 using GetFileTimeFn = FILETIME(*)(void*, const char*);

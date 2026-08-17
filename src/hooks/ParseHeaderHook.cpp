@@ -1,4 +1,6 @@
-#include "main.h"
+#include "rdr2/rage/fiDevice.h"
+#include "utils/log.h"
+#include "utils/memory.h"
 
 static bool(*ParseHeaderOrig)(void*, const char*, bool, void*, rage::fiResourceInfo*, bool);
 static bool ParseHeaderHook(void* a1, const char* name, bool readHeader, void* customHeader, rage::fiResourceInfo* a5, bool a6)

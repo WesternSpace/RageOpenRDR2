@@ -1,4 +1,11 @@
-#include "main.h"
+#include "rdr2/rage/fiDeviceRelative.h"
+#include "rdr2/game/MountableContent.h"
+#include "utils/log.h"
+#include "utils/memory.h"
+
+#include <cstdio>
+#include <cstring>
+#include <filesystem>
 
 /*
 	List of stuff you can replace with this: https://gist.github.com/martonp96/59f731446c7f17db3f400c2be458c4a4

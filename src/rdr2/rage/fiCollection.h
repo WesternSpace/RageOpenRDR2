@@ -1,5 +1,7 @@
 #pragma once
 
+#include "fiDevice.h"
+
 namespace rage
 {
 	class fiCollection : public fiDevice

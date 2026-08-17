@@ -1,7 +1,10 @@
-#include "main.h"
-#include <iomanip>
-#include <sstream>
-#include <string>
+#include "log.h"
+#include "config.h"
+
+#include <Windows.h>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
 
 void logger::init()
 {

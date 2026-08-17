@@ -1,7 +1,17 @@
 #pragma once
+
+#include <Windows.h>
+#include <algorithm>
 #include <cstdint>
-#include <vector>
+#include <cstdlib>
+#include <cstring>
 #include <functional>
+#include <stdexcept>
+#include <string>
+#include <type_traits>
+#include <utility>
+#include <vector>
+
 #include "vendor/minhook/include/MinHook.h"
 #include "log.h"
 
