@@ -15,13 +15,15 @@ void HookGetSystemTimeAsFileTime(LPFILETIME lpSystemTimeAsFileTime)
 
 		// Don't hide the console
 		auto addr = memory::scan("ff 15 ? ? ? ? 33 c9 ff 15 ? ? ? ? 45 33 c9");
-		if (addr.address != 0) {
+		if (addr.address != 0) 
+		{
 			addr.nop(6);
 		}
 
 		// cache skip
 		addr = memory::scan("74 ? e8 ? ? ? ? 48 8b c8 48 8d 15 ? ? ? ? e8 ? ? ? ? 66 83 7b");
-		if (addr.address != 0) {
+		if (addr.address != 0) 
+		{
 			addr.put<uint8_t>(0xEB);
 		}
 
